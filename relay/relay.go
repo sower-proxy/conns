@@ -6,8 +6,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 func RelayTo(conn net.Conn, addr string) (dur time.Duration, err error) {
@@ -18,7 +16,7 @@ func RelayTo(conn net.Conn, addr string) (dur time.Duration, err error) {
 	start := time.Now()
 	rc, err := net.DialTimeout("tcp", addr, 5*time.Second)
 	if err != nil {
-		return time.Since(start), errors.WithStack(err)
+		return time.Since(start), err
 	}
 	defer rc.Close()
 

@@ -3,10 +3,10 @@ package socks5
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"net"
 	"strconv"
-
-	"github.com/pkg/errors"
 )
 
 type AddrHead struct {
@@ -35,10 +35,10 @@ func (s *Socks5) Unwrap(conn net.Conn) (net.Addr, error) {
 	{ //auth
 		auth := new(authReq)
 		if err := auth.Fulfill(conn); err != nil && !auth.IsValid() {
-			return nil, errors.Errorf("read head: %v, err: %s", auth, err)
+			return nil, fmt.Errorf("read head: %v, err: %w", auth, err)
 		}
 		if err := binary.Write(conn, binary.BigEndian, noAuthResp); err != nil {
-			return nil, errors.Wrap(err, "write auth")
+			return nil, fmt.Errorf("write auth: %w", err)
 		}
 	}
 
@@ -46,7 +46,7 @@ func (s *Socks5) Unwrap(conn net.Conn) (net.Addr, error) {
 	{ // head
 		head := new(reqHead)
 		if err := binary.Read(conn, binary.BigEndian, head); err != nil || !head.IsValid() {
-			return nil, errors.Errorf("read head: %v, err: %s", head, err)
+			return nil, fmt.Errorf("read head: %v, err: %w", head, err)
 		}
 		switch head.ATYP {
 		case 0x01: // IPv4
@@ -60,11 +60,11 @@ func (s *Socks5) Unwrap(conn net.Conn) (net.Addr, error) {
 		}
 
 		if err := addr.Fulfill(conn); err != nil {
-			return nil, errors.Wrap(err, "read target")
+			return nil, fmt.Errorf("read target addr: %w", err)
 		}
 
 		if err := binary.Write(conn, binary.BigEndian, succHeadResp); err != nil {
-			return nil, errors.Wrap(err, "write head")
+			return nil, fmt.Errorf("write head: %w", err)
 		}
 	}
 
@@ -83,12 +83,12 @@ var domainHead = reqHead{VER: 5, CMD: 1, RSV: 0, ATYP: 3}
 func (s *Socks5) Wrap(conn net.Conn, tgtHost string, tgtPort uint16) error {
 	{ // auth
 		if err := binary.Write(conn, binary.BigEndian, &noAuthReq); err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("write auth: %w", err)
 		}
 
 		resp := &authResp{}
 		if err := binary.Read(conn, binary.BigEndian, resp); err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("read auth: %w", err)
 		}
 	}
 	{ // head
@@ -99,12 +99,12 @@ func (s *Socks5) Wrap(conn net.Conn, tgtHost string, tgtPort uint16) error {
 		buf.Write([]byte{byte(tgtPort >> 8), byte(tgtPort)})
 
 		if _, err := conn.Write(buf.Bytes()); err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("write head: %w", err)
 		}
 
 		head := respHead{}
 		if err := binary.Read(conn, binary.BigEndian, &head); err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("read head: %w", err)
 		}
 	}
 
