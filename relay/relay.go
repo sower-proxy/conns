@@ -1,10 +1,11 @@
 package relay
 
 import (
+	"errors"
 	"io"
 	"net"
+	"os"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -20,29 +21,30 @@ func RelayTo(conn net.Conn, addr string) (dur time.Duration, err error) {
 	}
 	defer rc.Close()
 
-	Relay(conn, rc)
-	return time.Since(start), nil
+	err = Relay(conn, rc)
+	return time.Since(start), err
 }
 
-func Relay(conn1, conn2 net.Conn) {
-	wg := &sync.WaitGroup{}
-	exitFlag := new(int32)
-	wg.Add(2)
-	go redirect(conn2, conn1, wg, exitFlag)
-	redirect(conn1, conn2, wg, exitFlag)
+func Relay(left, right net.Conn) error {
+	var err, err1 error
+	var wg sync.WaitGroup
+	var wait = 5 * time.Second
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, err1 = io.Copy(right, left)
+		right.SetReadDeadline(time.Now().Add(wait)) // unblock read on right
+	}()
+
+	_, err = io.Copy(left, right)
+	left.SetReadDeadline(time.Now().Add(wait)) // unblock read on left
 	wg.Wait()
-}
-func redirect(dst, src net.Conn, wg *sync.WaitGroup, exitFlag *int32) {
 
-	// io.Copy(dst, io.TeeReader(src, os.Stdout))
-	io.Copy(dst, src)
-
-	if atomic.CompareAndSwapInt32(exitFlag, 0, 1) {
-		// wakeup blocked goroutine
-		now := time.Now()
-		src.SetDeadline(now)
-		dst.SetDeadline(now)
+	if err1 != nil && !errors.Is(err1, os.ErrDeadlineExceeded) { // requires Go 1.15+
+		return err1
 	}
-
-	wg.Done()
+	if err != nil && !errors.Is(err, os.ErrDeadlineExceeded) {
+		return err
+	}
+	return nil
 }
