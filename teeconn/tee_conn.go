@@ -21,18 +21,19 @@ func New(c net.Conn) *Conn {
 func (t *Conn) Reread() {
 	t.offset = 0
 }
+
 func (t *Conn) Reset() {
 	t.buf = []byte{}
 	t.offset = 0
 }
+
 func (t *Conn) Stop() *Conn {
 	t.stop = true
 	return t
 }
 
 func (t *Conn) Read(b []byte) (n int, err error) {
-	length := len(t.buf) - t.offset
-	if length > 0 {
+	if len(t.buf) > t.offset {
 		n = copy(b, t.buf[t.offset:])
 		t.offset += n
 		return n, t.err

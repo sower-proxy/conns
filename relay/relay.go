@@ -28,7 +28,7 @@ func RelayTo(conn net.Conn, addr string) (dur time.Duration, err error) {
 func Relay(left, right net.Conn) error {
 	var err, err1 error
 	var wg sync.WaitGroup
-	var wait = 5 * time.Second
+	wait := 5 * time.Second
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

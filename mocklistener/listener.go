@@ -1,6 +1,8 @@
 package mocklistener
 
-import "net"
+import (
+	"net"
+)
 
 var _ net.Listener = (*Listener)(nil)
 

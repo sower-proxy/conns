@@ -70,6 +70,7 @@ type addrType interface {
 }
 
 // ATYP:
+//
 //	0x01 -> net.IPv4len
 //	0x03 -> first byte is length
 //	0x04 -> net.IPv6len
@@ -81,6 +82,7 @@ type addrTypeIPv4 struct {
 func (a *addrTypeIPv4) Fulfill(r io.Reader) error {
 	return binary.Read(r, binary.BigEndian, a)
 }
+
 func (a *addrTypeIPv4) Addr() (string, uint16) {
 	return net.IP(a.DST_ADDR[:]).String(), a.DST_PORT
 }
@@ -108,6 +110,7 @@ func (a *addrTypeDomain) Fulfill(r io.Reader) error {
 
 	return nil
 }
+
 func (a *addrTypeDomain) Addr() (string, uint16) {
 	return string(a.DST_ADDR[:]), a.DST_PORT
 }
@@ -120,6 +123,7 @@ type addrTypeIPv6 struct {
 func (a *addrTypeIPv6) Fulfill(r io.Reader) error {
 	return binary.Read(r, binary.BigEndian, a)
 }
+
 func (a *addrTypeIPv6) Addr() (string, uint16) {
 	return net.IP(a.DST_ADDR[:]).String(), a.DST_PORT
 }
