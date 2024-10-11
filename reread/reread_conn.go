@@ -1,4 +1,4 @@
-package teeconn
+package reread
 
 import (
 	"io"
